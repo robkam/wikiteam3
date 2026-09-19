@@ -647,7 +647,7 @@ wheels = [
 
 [[package]]
 name = "wikiteam3"
-version = "4.4.9"
+version = "4.4.10"
 source = { editable = "." }
 dependencies = [
     { name = "file-read-backwards" },
