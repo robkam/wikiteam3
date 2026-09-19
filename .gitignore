@@ -13,3 +13,5 @@ desktop.ini
 .venv
 .vscode
 .idea
+
+.python-version
