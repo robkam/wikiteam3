@@ -13,7 +13,7 @@ dependencies = [
     "file-read-backwards<4.0.0,>=3.1.0",
     "python-slugify<9.0.0,>=8.0.4",
     "lxml>=6.0.2",
-    "pillow>=10.0.0,<13.0.0"
+    "filetype>=1.2.0",
 ]
 readme = "README.md"
 keywords = ["archiveteam", "mediawiki", "wikiteam", "wikiteam3", "preservation", "wiki", "wikipedia"]

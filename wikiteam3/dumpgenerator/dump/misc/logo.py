@@ -4,7 +4,7 @@ import sys
 from io import BytesIO
 
 import requests
-from PIL import Image
+import filetype
 
 from wikiteam3.dumpgenerator.cli.delay import Delay
 from wikiteam3.dumpgenerator.config import Config
@@ -12,7 +12,7 @@ from wikiteam3.utils.identifier import url2prefix_from_config
 
 
 def save_logo(config: Config, session: requests.Session):
-    """Save the wiki logo as (prefix)-logo.extension"""
+    """Save the wiki logo as (prefix)-logo.{extension}"""
     print("Downloading logo")
     if not os.path.exists(f"{config.path}/siteinfo.json"):
         print("siteinfo.json not found, did the download fail? Cannot get logo URL")
@@ -30,16 +30,16 @@ def save_logo(config: Config, session: requests.Session):
     for tries_left in range(3, -1, -1):
         Delay(config=config)
         try:
-            r = session.get(logo_url, stream=True, timeout=10)
+            r = session.get(logo_url, timeout=15)
 
-            with Image.open(BytesIO(r.content)) as image:
-                extension = next((ext for ext, fmt in Image.registered_extensions().items() if fmt == image.format), ".unknown")
+            extension = filetype.guess_extension(r.content) or "unknown"
+            extension = f".{extension}"
 
-                logo_filename = f"{config.path}/{url2prefix_from_config(config=config)}-{config.date}-logo{extension}"
-                image.save(logo_filename)
-                print(f"Saved logo as {logo_filename}")
-                return
-
+            logo_filename = f"{config.path}/{url2prefix_from_config(config=config)}-{config.date}-logo{extension}"
+            with open(logo_filename, "wb") as f:
+                f.write(r.content)
+            print(f"Saved logo as {logo_filename}")
+            return
         except Exception as e:
             if tries_left == 0:
                 print(f"Failed to download logo from {logo_url}: {e}")
