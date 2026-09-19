@@ -10,6 +10,7 @@ from wikiteam3.dumpgenerator.config import Config
 from wikiteam3.dumpgenerator.cli import get_parameters, bye, welcome
 from wikiteam3.dumpgenerator.dump.image.image import FILENAME_LIMIT, Image
 from wikiteam3.dumpgenerator.dump.misc.index_php import save_IndexPHP
+from wikiteam3.dumpgenerator.dump.misc.logo import save_logo
 from wikiteam3.dumpgenerator.dump.misc.special_logs import save_SpecialLog
 from wikiteam3.dumpgenerator.dump.misc.special_version import save_SpecialVersion
 from wikiteam3.dumpgenerator.dump.misc.site_info import assert_siteinfo, get_siteinfo, save_siteinfo
@@ -90,6 +91,7 @@ class DumpGenerator:
             save_SpecialVersion(config=config, session=other.session)
         if config.api:
             save_siteinfo(config=config, session=other.session)
+            save_logo(config=config, session=other.session)
 
         mark_as_done(config=config, mark=ALL_DUMPED_MARK)
         bye(config.path)

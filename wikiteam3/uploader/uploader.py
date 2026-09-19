@@ -197,6 +197,11 @@ def prepare_files_to_upload(wikidump_dir: Path, config: Config, item: Item, *, p
     if (wikidump_dir / "index.html").exists():
         filedict[f"{config2basename(config)}-dumpMeta/index.html"] = str(wikidump_dir / "index.html")
 
+    # logo
+    for logo_file in Path(wikidump_dir).glob(f"{config2basename(config)}-logo.*"):
+        filedict[f"{logo_file.name}"] = str(logo_file)
+        break  # only one logo file is allowed
+
     print("=== commpressing necessary files: ===")
 
     # .xml dump
@@ -270,8 +275,8 @@ def prepare_files_to_upload(wikidump_dir: Path, config: Config, item: Item, *, p
 
     return filedict
 
-def prepare_item_metadata(wikidump_dir: Path, config: Config, arg: Args) -> Tuple[Dict, Optional[str]]:
-    """ return: (IA item metadata dict, logo_url) """
+def prepare_item_metadata(wikidump_dir: Path, config: Config, arg: Args) -> dict[str, Union[str, None]]:
+    """ return: IA item metadata dict """
 
     wiki_prefix: str = url2prefix_from_config(config=config, ascii_slugify=False) # e.g. wiki.example.org
 
@@ -280,7 +285,6 @@ def prepare_item_metadata(wikidump_dir: Path, config: Config, arg: Args) -> Tupl
     rights_url: Optional[str] = None # or empty str
     lang: Optional[str] = None # or empty str
     base_url: Optional[str] = None # or empty str
-    logo_url: Optional[str] = None # or empty str
     if (wikidump_dir / "siteinfo.json").exists():
         with open(wikidump_dir / "siteinfo.json", "r", encoding="utf-8") as f:
             siteinfo: Dict = json.load(f)
@@ -299,8 +303,6 @@ def prepare_item_metadata(wikidump_dir: Path, config: Config, arg: Args) -> Tupl
                 print(f"WARNING: base_url {base_url} starts with // (protocol-relative URLs), will convert to https://")
                 # Convert protocol-relative URLs
                 base_url = re.sub(r"^//", r"https://", base_url)
-
-        logo_url = general.get("logo", None)
 
         lang = general.get("lang", None)
         assert isinstance(lang, str) or lang is None
@@ -362,9 +364,8 @@ def prepare_item_metadata(wikidump_dir: Path, config: Config, arg: Args) -> Tupl
     }
     print("=== Item metadata: ===")
     print(json.dumps(metadata, indent=4, sort_keys=True, ensure_ascii=False))
-    print(f"logo_url: {logo_url}")
 
-    return metadata, logo_url
+    return metadata
 
 def upload(arg: Args):
     zstd_compressor = ZstdCompressor(bin_zstd=arg.bin_zstd, rezstd=arg.rezstd, rezstd_endpoint=arg.rezstd_endpoint)
@@ -418,7 +419,7 @@ def upload(arg: Args):
         )
 
     print("=== Preparing metadata ===")
-    metadata, logo_url = prepare_item_metadata(wikidump_dir, config, arg)
+    metadata = prepare_item_metadata(wikidump_dir, config, arg)
 
     print("=== Checking IA S3 load average (optional) ===")
 
@@ -443,17 +444,6 @@ def upload(arg: Args):
 
     print("=== Uploading ===")
     upload_main_resouces(item, filedict, metadata, ia_keys)
-
-    item = get_item(identifier)
-    if logo_url:
-        print("=== Uploading logo (optional) ===")
-        try:
-            logo_url = urllib.parse.urljoin(config.api or config.index, logo_url)
-            upload_logo(item, logo_url, ia_keys)
-        except Exception as e:
-            traceback.print_exc()
-            print(f"Failed to upload logo: {e}")
-            print("Don't worry, it's optional.")
     
     item = get_item(identifier)
     print("=== Updating upload-state ===")
@@ -467,42 +457,6 @@ def upload(arg: Args):
     print(f"URL: https://archive.org/details/{identifier}")
     mark_as_done(config, UPLOADED_MARK, msg=f"identifier: {identifier}")
 
-def upload_logo(item: Item, logo_url: str, ia_keys: IAKeys):
-    assert logo_url
-    assert item.identifier
-
-    parsed_url = urllib.parse.urlparse(logo_url)
-    logo_suff = parsed_url.path.split(".")[-1].lower()
-    if len(logo_suff) >= 7:
-        logo_suff = "unknown"
-    logo_name = item.identifier + "_logo." + logo_suff
-    for file_ in item.files:
-        if file_["name"] == logo_name:
-            print(f"Logo {logo_name} already exists, skip")
-            return
-    logo_io = None
-    for tries_left in range(4, 0, -1):
-        try:
-            logo_io = BytesIO(requests.get(logo_url, timeout=20).content)
-            break
-        except Exception:
-            if tries_left == 1:
-                raise
-            print(f"Failed to download logo, retrying ({tries_left} tries left)")
-            time.sleep(3)
-
-    assert logo_io
-
-    r_co = item.upload(
-        {logo_name: logo_io},
-        access_key=ia_keys.access,
-        secret_key=ia_keys.secret,
-        verbose=True,
-    )
-    for r_resp in r_co:
-        assert isinstance(r_resp, requests.Response)
-        print(r_resp.text)
-        r_resp.raise_for_status()
 
 def upload_main_resouces(item: Item, filedict: Dict[str, str], metadata: Dict, ia_keys: IAKeys):
     if not filedict:
