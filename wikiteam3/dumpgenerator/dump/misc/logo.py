@@ -28,9 +28,9 @@ def save_logo(config: Config, session: requests.Session):
         return
 
     for tries_left in range(3, -1, -1):
+        Delay(config=config)
         try:
             r = session.get(logo_url, stream=True, timeout=10)
-            Delay(config=config)
 
             with Image.open(BytesIO(r.content)) as image:
                 extension = next((ext for ext, fmt in Image.registered_extensions().items() if fmt == image.format), ".unknown")
