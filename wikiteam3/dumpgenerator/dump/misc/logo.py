@@ -21,7 +21,7 @@ def save_logo(config: Config, session: requests.Session):
     with open(f"{config.path}/siteinfo.json", "r", encoding="utf-8") as f:
         siteinfo = json.load(f)
 
-    logo_url: str = siteinfo.get("query", {}).get("general", {}).get("logo", None)
+    logo_url: str|None = siteinfo.get("query", {}).get("general", {}).get("logo", None)
     if not logo_url:
         print("No logo URL found in siteinfo.json, skipping logo download")
         return
@@ -34,10 +34,10 @@ def save_logo(config: Config, session: requests.Session):
             extension = filetype.guess_extension(r.content) or "unknown"
             extension = f".{extension}"
 
-            logo_filename = f"{config.path}/{url2prefix_from_config(config=config)}-{config.date}-logo{extension}"
-            with open(logo_filename, "wb") as f:
+            logo_filepath = f"{config.path}/{url2prefix_from_config(config=config)}-{config.date}-logo{extension}"
+            with open(logo_filepath, "wb") as f:
                 f.write(r.content)
-            print(f"Saved logo as {logo_filename}")
+            print(f"Saved logo as {logo_filepath}")
             return
         except Exception as e:
             if tries_left == 0:
