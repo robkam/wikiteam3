@@ -34,6 +34,13 @@ def save_logo(config: Config, session: requests.Session):
             extension = filetype.guess_extension(r.content) or "unknown"
             extension = f".{extension}"
 
+            _type = filetype.guess(r.content)
+            is_image = _type is not None and any(m.mime == _type.mime for m in filetype.image_matchers)
+
+            if not is_image:
+                print(f"Downloaded file is not a valid image ({_type}), skipping logo save")
+                return
+
             logo_filepath = f"{config.path}/{url2prefix_from_config(config=config)}-{config.date}-logo{extension}"
             with open(logo_filepath, "wb") as f:
                 f.write(r.content)
