@@ -15,8 +15,7 @@ def save_logo(config: Config, session: requests.Session):
     """Save the wiki logo as (prefix)-logo.{extension}"""
     print("Downloading logo")
     if not os.path.exists(f"{config.path}/siteinfo.json"):
-        print("siteinfo.json not found, did the download fail? Cannot get logo URL")
-        sys.exit(1)
+        raise FileNotFoundError("siteinfo.json not found, did the download fail? Cannot get logo URL")
 
     siteinfo = {}
     with open(f"{config.path}/siteinfo.json", "r", encoding="utf-8") as f:
